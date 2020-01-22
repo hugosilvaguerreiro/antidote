@@ -609,6 +609,9 @@ get_time([{Time, TxId} | Rest], TxIdCheck) ->
 
 %%%===================================================================
 %%% Ets tables
+%%
+%%  committed_tx_cache: the transaction time of the last committed
+%%                      transaction for each key.
 %%%===================================================================
 
 -spec create_committed_txns_cache() -> cache_id().
