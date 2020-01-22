@@ -35,7 +35,7 @@
 -export([has_prepared_txns_cache/1,
     get_prepared_txns_by_key/2,
     get_prepared_txns/1,
-    get_prepared_txns_by_table/1,
+    get_prepared_txn_by_key_and_table/2,
     create_prepared_txns_cache/1,
     delete_prepared_txns_cache/1,
     is_prepared_txn_by_table/2,
@@ -56,32 +56,23 @@ has_prepared_txns_cache(Partition) ->
 
 -spec get_prepared_txns_by_key(partition_id(), key()) -> list().
 get_prepared_txns_by_key(Partition, Key) ->
-    case ets:lookup(get_prepared_cache_name(Partition), Key) of
+    get_prepared_txn_by_key_and_table(get_prepared_cache_name(Partition), Key).
+
+-spec get_prepared_txns(partition_id()) -> list().
+get_prepared_txns(Partition) ->
+    case ets:tab2list(get_prepared_cache_name(Partition)) of
+        [] ->
+            [];
+        List -> lists:flatmap(fun({_, List1}) -> List1 end, List)
+    end.
+
+-spec get_prepared_txn_by_key_and_table(cache_id(), key()) -> list().
+get_prepared_txn_by_key_and_table(Table, Key) ->
+    case ets:lookup(Table, Key) of
         [] ->
             [];
         [{Key, List}] ->
             List
-    end.
-
--spec get_prepared_txns(partition_id()) -> list().
-get_prepared_txns(Partition) ->
-    get_prepared_txns_by_table(get_prepared_cache_name(Partition)).
-
--spec get_prepared_txns_by_table(cache_id()) -> list().
-get_prepared_txns_by_table(Table) ->
-    case ets:tab2list(Table) of
-        [] ->
-            [];
-        [{Key1, List1} | Rest1] ->
-            lists:foldl(fun({_Key, List}, Acc) ->
-                case List of
-                    [] ->
-                        Acc;
-                    _ ->
-                        List ++ Acc
-                end
-                        end,
-                [], [{Key1, List1} | Rest1])
     end.
 
 -spec is_prepared_txn_by_table(cache_id(), key()) -> true | false.

@@ -407,7 +407,7 @@ prepare(Transaction, TxWriteSet, CommittedTx, PreparedTx, PrepareTime, PreparedD
 set_prepared(_PreparedTx, [], _TxId, _Time, Acc) ->
     Acc;
 set_prepared(PreparedTx, [{Key, _Type, _Update} | Rest], TxId, Time, Acc) ->
-    ActiveTxs = antidote_ets_txn_caches:get_prepared_txns_by_table(PreparedTx),
+    ActiveTxs = antidote_ets_txn_caches:get_prepared_txn_by_key_and_table(PreparedTx, Key),
     case lists:keymember(TxId, 1, ActiveTxs) of
         true ->
             set_prepared(PreparedTx, Rest, TxId, Time, Acc);
@@ -494,7 +494,7 @@ clean_and_notify(TxId, Updates, #state{
 clean_prepared(_PreparedTx, [], _TxId) ->
     ok;
 clean_prepared(PreparedTx, [{Key, _Type, _Update} | Rest], TxId) ->
-    ActiveTxs = antidote_ets_txn_caches:get_prepared_txns_by_table(PreparedTx),
+    ActiveTxs = antidote_ets_txn_caches:get_prepared_txn_by_key_and_table(PreparedTx, Key),
     NewActive = lists:keydelete(TxId, 1, ActiveTxs),
     true = case NewActive of
                [] ->
