@@ -188,7 +188,7 @@ abort(ListofNodes, TxId) ->
 %%      the transactions it participates on.
 init([Partition]) ->
     PreparedTx = antidote_ets_txn_caches:create_prepared_txns_cache(Partition),
-    CommittedTx = ets:new(committed_tx, [set]),
+    CommittedTx = create_committed_txns_cache(),
     {ok, #state{partition = Partition,
         prepared_tx = PreparedTx,
         committed_tx = CommittedTx,
@@ -435,7 +435,7 @@ commit(Transaction, TxCommitTime, Updates, CommittedTx, State) ->
         [{Key, _Type, _Update} | _Rest] ->
         case application:get_env(antidote, txn_cert) of
         {ok, true} ->
-            lists:foreach(fun({K, _, _}) -> true = ets:insert(CommittedTx, {K, TxCommitTime}) end,
+            lists:foreach(fun({K, _, _}) -> true = insert_committed_txn(CommittedTx, K, TxCommitTime) end,
                   Updates);
         _ ->
             ok
@@ -524,7 +524,7 @@ certification_with_check(_, [], _, _) ->
 certification_with_check(TxId, [H | T], CommittedTx, PreparedTx) ->
     TxLocalStartTime = TxId#tx_id.local_start_time,
     {Key, _, _} = H,
-    case ets:lookup(CommittedTx, Key) of
+    case get_committed_txn(CommittedTx, Key) of
         [{Key, CommitTime}] ->
             case CommitTime > TxLocalStartTime of
                 true ->
@@ -605,6 +605,25 @@ get_time([{Time, TxId} | Rest], TxIdCheck) ->
         false ->
             get_time(Rest, TxIdCheck)
     end.
+
+
+%%%===================================================================
+%%% Ets tables
+%%%===================================================================
+
+-spec create_committed_txns_cache() -> cache_id().
+create_committed_txns_cache() ->
+    ets:new(committed_tx, [set]).
+
+-spec insert_committed_txn(cache_id(), key(), clock_time()) -> true.
+insert_committed_txn(CommittedTxCache, Key, TxCommitTime) ->
+    ets:insert(CommittedTxCache, {Key, TxCommitTime}).
+
+-spec get_committed_txn(cache_id(), key()) -> [] | [{key(), clock_time()}].
+get_committed_txn(CommittedTxCache, Key) ->
+    ets:lookup(CommittedTxCache, Key).
+
+
 
 -ifdef(TEST).
 
